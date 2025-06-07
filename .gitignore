@@ -1,0 +1,14 @@
+# Ignore compiled class files
+*.class
+
+# Ignore target directory (Maven)
+target/
+
+# Ignore IntelliJ / Eclipse / VSCode settings (optional)
+*.iml
+.idea/
+*.log
+.vscode/
+*.classpath
+*.project
+.settings/

@@ -63,33 +63,4 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 		return null;
 	}
-//	@Override
-//	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-//			throws ServletException, IOException {
-//		String authHeader = request.getHeader("Authorization");
-//        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-//            filterChain.doFilter(request, response);
-//            return;
-//        }
-//
-//        String jwt = authHeader.substring(7);
-//        String username = jwtService.extractUsername(jwt);
-//
-//        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-//            User user = (User) userRepository.findByUsername(username).orElseThrow();
-//            UserDetails userDetails = org.springframework.security.core.userdetails.User
-//                .withUsername(user.getUsername())
-//                .password(user.getPassword())
-//                .roles(user.getRole().replace("ROLE_", ""))
-//                .build();
-//
-//            if (jwtService.isTokenValid(jwt, userDetails)) {
-//                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-//                        userDetails, null, userDetails.getAuthorities());
-//                SecurityContextHolder.getContext().setAuthentication(authToken);
-//            }
-//        }
-//
-//        filterChain.doFilter(request, response);
-//	}
 }
