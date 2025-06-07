@@ -1,14 +1,18 @@
 package com.usermanagemet.controller;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,13 +21,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+
 import com.usermanagemet.domain.Role;
 import com.usermanagemet.domain.User;
 import com.usermanagemet.enums.RoleEnum;
 import com.usermanagemet.payload.response.MessageResponse;
 import com.usermanagemet.repositories.RoleRepository;
 import com.usermanagemet.repositories.UserRepository;
+import com.usermanagemet.security.services.UserDetailsImpl;
 import com.usermanagemet.userDTOs.RegisterRequestDto;
+import com.usermanagemet.userDTOs.LoginRequestDto;
 import com.usermanagemet.userDTOs.AuthResponseDto;
 import com.usermanagemet.utils.JwtUtilService;
 
@@ -41,6 +48,12 @@ public class AuthController {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private AuthenticationManager authenticationManager;
+	
+	@Autowired
+	private JwtUtilService jwtUtilService;
 
 	@PostMapping("/register")
 	public ResponseEntity<?> registerUser(@RequestBody RegisterRequestDto registerRequestDto) {
@@ -69,7 +82,7 @@ public class AuthController {
 					roles.add(adminRole);
 
 					break;
-				case "mod":
+				case "superadmin":
 					Role modRole = roleRepository.findByName(RoleEnum.ROLE_SUPERADMIN)
 							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
 					roles.add(modRole);
@@ -89,21 +102,29 @@ public class AuthController {
 		return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
 	}
 
-//	@PostMapping("/login")
-//	public ResponseEntity<?> login(@RequestBody RegisterRequestDto request) throws Throwable {
-//		try {
-//			authenticationManager.authenticate(
-//					new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
-//
-//			User user = (User) userRepository.findByUsername(request.getUsername())
-//					.orElseThrow(() -> new UsernameNotFoundException("User not found"));
-//
-//			String token = jwtService.generateToken(user);
-//			return ResponseEntity.ok(new AuthResponseDto(token));
-//
-//		} catch (Exception ex) {
-//			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login failed: " + ex.getMessage());
-//		}
-//	}
+	@PostMapping("/login")
+	public ResponseEntity<?> login(@RequestBody LoginRequestDto loginRequestDto  ) throws Throwable {
+		try {
+			Authentication authenticate = authenticationManager.authenticate(
+					new UsernamePasswordAuthenticationToken(loginRequestDto.getEmail(), loginRequestDto.getPassword()));
 
+			SecurityContextHolder.getContext().setAuthentication(authenticate);
+			String jwtToken = jwtUtilService.generateToken(authenticate);
+			
+			UserDetailsImpl userDetails = (UserDetailsImpl) authenticate.getPrincipal();
+			List<String> roles = userDetails.getAuthorities().stream()
+			        .map(item -> item.getAuthority())
+			        .collect(Collectors.toList());
+			return ResponseEntity.ok(new AuthResponseDto(jwtToken,
+					userDetails.getId()
+					,userDetails.getFirstName()
+					,userDetails.getLastName()
+					,userDetails.getEmail(),
+					roles)
+					);
+
+		} catch (Exception ex) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login failed: " + ex.getMessage());
+		}
+	}
 }
