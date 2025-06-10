@@ -20,8 +20,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @Table(name = "users",
 uniqueConstraints = { 
-	      @UniqueConstraint(columnNames = "firstName"),
-	      @UniqueConstraint(columnNames = "lastName"),
 	      @UniqueConstraint(columnNames = "email") 
 	    })
 public class User {
