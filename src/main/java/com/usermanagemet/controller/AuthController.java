@@ -34,7 +34,6 @@ import com.usermanagemet.userDTOs.LoginRequestDto;
 import com.usermanagemet.userDTOs.AuthResponseDto;
 import com.usermanagemet.utils.JwtUtilService;
 
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -68,32 +67,11 @@ public class AuthController {
 
 		Set<String> strRoles = registerRequestDto.getRole();
 		Set<Role> roles = new HashSet<>();
-
-		if (strRoles == null) {
-			Role userRole = roleRepository.findByName(RoleEnum.ROLE_CUSTOMER)
+		
+		if (strRoles == null || strRoles.isEmpty()) {
+			Role userRole = roleRepository.findByName("ROLE_CUSTOMER")
 					.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
 			roles.add(userRole);
-		} else {
-			strRoles.forEach(role -> {
-				switch (role) {
-				case "admin":
-					Role adminRole = roleRepository.findByName(RoleEnum.ROLE_ADMIN)
-							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-					roles.add(adminRole);
-
-					break;
-				case "superadmin":
-					Role modRole = roleRepository.findByName(RoleEnum.ROLE_SUPERADMIN)
-							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-					roles.add(modRole);
-
-					break;
-				default:
-					Role userRole = roleRepository.findByName(RoleEnum.ROLE_CUSTOMER)
-							.orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-					roles.add(userRole);
-				}
-			});
 		}
 
 		user.setRoles(roles);
@@ -101,7 +79,7 @@ public class AuthController {
 
 		return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
 	}
-
+	
 	@PostMapping("/login")
 	public ResponseEntity<?> login(@RequestBody LoginRequestDto loginRequestDto  ) throws Throwable {
 		try {

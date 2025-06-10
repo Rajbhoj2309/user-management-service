@@ -33,7 +33,7 @@ public class UserDetailsImpl implements UserDetails{
      
     public static UserDetailsImpl build(User user) {
         List<GrantedAuthority> authorities = user.getRoles().stream()
-            .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+            .map(role -> new SimpleGrantedAuthority(role.getName()))
             .collect(Collectors.toList());
 
         return new UserDetailsImpl(
@@ -57,7 +57,7 @@ public class UserDetailsImpl implements UserDetails{
 
 	@Override
 	public String getUsername() {
-		return firstName.concat(" "+lastName);
+		return email;
 	}
 
 	@Override
