@@ -15,6 +15,14 @@ public class AuthResponseDto {
     private String lastName;
     private String email;
     private List<String> roles;
+    
+    public AuthResponseDto(String generateNewToken, Long id, String firstName, String lastName, String email) {
+		this.token = generateNewToken;
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+	}
 
     public AuthResponseDto(String accessToken, Long id, String firstName,String lastName, String email, List<String> roles) {
         this.token = accessToken;
@@ -24,4 +32,6 @@ public class AuthResponseDto {
         this.email = email;
         this.roles = roles;
       }
+
+	
 }

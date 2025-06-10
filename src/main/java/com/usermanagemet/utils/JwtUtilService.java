@@ -35,21 +35,10 @@ public class JwtUtilService {
 		    return Jwts.builder()
 		        .setSubject((userPrincipal.getUsername()))
 		        .setIssuedAt(new Date())
-//		        .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
 		        .setExpiration(new Date((new Date()).getTime() + keyExpirationMs))
 		        .signWith(key(), SignatureAlgorithm.HS256)
 		        .compact();
 		  }
-//		//public String generateToken(UserDetails userDetails) {
-//		Map<String, Object> claims = new HashMap<>();
-//		claims.put("role",
-//				userDetails.getAuthorities().stream().findFirst().map(GrantedAuthority::getAuthority).orElse("USER"));
-//
-//		return Jwts.builder().setClaims(claims).setSubject(userDetails.getUsername())
-//				.setIssuedAt(new Date(System.currentTimeMillis()))
-//				.setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 1 hour
-//				.signWith(Keys.hmacShaKeyFor(SECRET.getBytes()), SignatureAlgorithm.HS256).compact();
-//	}
 		  private Key key() {
 		    return Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET_KEY));
 		  }
@@ -75,10 +64,4 @@ public class JwtUtilService {
 
 		    return false;
 		  }
-//	public boolean isTokenValid(String token, UserDetails userDetails) {
-//		return extractUsername(token).equals(userDetails.getUsername());
-//	}
-
-
-
 }
