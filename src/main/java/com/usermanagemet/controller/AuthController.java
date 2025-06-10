@@ -1,31 +1,32 @@
 package com.usermanagemet.controller;
 
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
+import com.usermanagemet.domain.RefreshToken;
 import com.usermanagemet.domain.Role;
 import com.usermanagemet.domain.User;
-import com.usermanagemet.enums.RoleEnum;
 import com.usermanagemet.payload.response.MessageResponse;
+import com.usermanagemet.repositories.RefreshTokenRepository;
 import com.usermanagemet.repositories.RoleRepository;
 import com.usermanagemet.repositories.UserRepository;
 import com.usermanagemet.security.services.UserDetailsImpl;
@@ -38,6 +39,9 @@ import com.usermanagemet.utils.JwtUtilService;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+	
+	 @Value("${allinone.app.keyExpirationMs}")
+	 private int keyExpirationMs;
 
 	@Autowired
 	private UserRepository userRepository;
@@ -53,6 +57,9 @@ public class AuthController {
 	
 	@Autowired
 	private JwtUtilService jwtUtilService;
+	
+	@Autowired
+	private RefreshTokenRepository refreshTokenRepository;
 
 	@PostMapping("/register")
 	public ResponseEntity<?> registerUser(@RequestBody RegisterRequestDto registerRequestDto) {
@@ -90,6 +97,14 @@ public class AuthController {
 			String jwtToken = jwtUtilService.generateToken(authenticate);
 			
 			UserDetailsImpl userDetails = (UserDetailsImpl) authenticate.getPrincipal();
+			User user = userRepository.findByEmail(userDetails.getEmail())
+					.orElseThrow(() -> new RuntimeException("User not found"));
+			RefreshToken userToken = new RefreshToken();
+			userToken.setUser(user);
+			userToken.setToken(jwtToken);
+			userToken.setCreatedAt(new Date());
+			userToken.setExpiresAt(new Date(new Date().getTime() + keyExpirationMs));
+			refreshTokenRepository.save(userToken);
 			List<String> roles = userDetails.getAuthorities().stream()
 			        .map(item -> item.getAuthority())
 			        .collect(Collectors.toList());
@@ -104,5 +119,36 @@ public class AuthController {
 		} catch (Exception ex) {
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login failed: " + ex.getMessage());
 		}
+	}
+	
+	@PostMapping("/refresh-token")
+	public ResponseEntity<?> refreshToken() {
+		Authentication authentication = (Authentication) SecurityContextHolder.getContext().getAuthentication();
+
+		if (authentication == null || !authentication.isAuthenticated()
+				|| authentication instanceof AnonymousAuthenticationToken) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized access");
+		}
+
+		Optional <User> userDetails=userRepository.findByEmail(authentication.getName());
+		if (userDetails.isEmpty()) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+		}
+
+		User user = userDetails.get();
+
+		Optional<RefreshToken> existingToken = refreshTokenRepository.findByUserId(user.getId());
+		existingToken.ifPresent(refreshTokenRepository::delete);
+		
+		String generateNewToken = jwtUtilService.generateToken(authentication);
+		
+		RefreshToken newToken = new RefreshToken();
+		newToken.setUser(user);
+		newToken.setToken(generateNewToken);
+		newToken.setExpiresAt(new Date(new Date().getTime() + keyExpirationMs));
+		refreshTokenRepository.save(newToken);
+		
+		return ResponseEntity.ok(new AuthResponseDto(generateNewToken, user.getId(), user.getFirstName(),
+				user.getLastName(), user.getEmail()));
 	}
 }
